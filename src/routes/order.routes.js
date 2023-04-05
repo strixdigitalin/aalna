@@ -40,4 +40,17 @@ router.get(
   orderController.userPreviousOrders_get
 );
 
+// ccavenue routes
+router.post(
+  "/ccavenuerequesthandler",
+  requireUserLogin,
+  orderController.ccavenuerequesthandler
+);
+
+router.post(
+  "/ccavenueresponsehandler",
+  requireUserLogin,
+  orderController.ccavenueresponsehandler
+);
+
 module.exports = router;
