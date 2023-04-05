@@ -320,12 +320,13 @@ module.exports.ccavenuerequesthandler = (request, response) => {
 
   request.on("end", function () {
     response.writeHeader(200, { "Content-Type": "text/html" });
-    response.write(formbody);
+    // response.write(formbody);
     // response.json({
     //   url: "https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction",
     //   encRequest,
     //   accessCode,
     // });
+    response.write(url);
     response.end();
   });
   return;
