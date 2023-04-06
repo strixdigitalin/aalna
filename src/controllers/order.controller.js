@@ -9,6 +9,7 @@ const {
   razorpayInstance,
 } = require("../utility");
 const crypto = require("crypto");
+const qs = require("querystring");
 const ccav = require("../utility/ccavutil");
 
 module.exports.placeOrder_post = async (req, res) => {
@@ -289,10 +290,86 @@ module.exports.rzpPaymentVerification = async (req, res) => {
 };
 
 // ccavenue controllers
+module.exports.ccavenue_creatOrder_post = async (req, res) => {
+  const { _id: userId } = req.user;
+  const { products, order_price, coupon_applied, shippingAddress } = req.body;
+  // make cart empty
+
+  if (!products || !order_price || !shippingAddress)
+    return errorRes(res, 400, "All fields are required.");
+  if (products.length == 0) return errorRes(res, 400, "Cart is empty.");
+
+  try {
+    await Promise.all(
+      products.map(item => {
+        if (!item.quantity >= 1)
+          return errorRes(res, 400, "Remove products from with zero quantity.");
+        Product.findById(item.product).then(prod => {
+          if (!prod)
+            return errorRes(
+              res,
+              400,
+              `Internal server error. Please refresh cart.`
+            );
+          if (!prod.availability >= 1)
+            return errorRes(
+              res,
+              400,
+              "Remove out of stock products from cart."
+            );
+          if (!prod.availability >= item.quantity)
+            return errorRes(
+              res,
+              400,
+              `Cannot place order for product ${prod.displayName} with quantity more than ${prod.availability}`
+            );
+        });
+      })
+    );
+
+    const order = new User_Order({
+      buyer: userId,
+      products,
+      order_price,
+      coupon_applied,
+      shippingAddress,
+      payment_mode: "ONLINE",
+      payment_status: "PENDING",
+    });
+
+    await order
+      .save()
+      .then(savedOrder => {
+        savedOrder
+          .populate([
+            { path: "buyer", select: "_id displayName email" },
+            {
+              path: "products.product",
+              select:
+                "_id displayName brand_title color price product_category displayImage availability",
+            },
+            {
+              path: "coupon_applied",
+              select: "_id code condition min_price discount_percent is_active",
+            },
+          ])
+          .then(result =>
+            successRes(res, {
+              order: result,
+              message: "Order placed successfully.",
+            })
+          );
+      })
+      .catch(err => internalServerError(res, err));
+  } catch (error) {
+    internalServerError(res, error);
+  }
+};
+
 module.exports.ccavenuerequesthandler = (request, response) => {
   var body = "",
-    workingKey = "76F35BB595FC59398972C0A3A82C76C1",
-    accessCode = "AVUW30KC74BP11WUPB",
+    workingKey = process.env.CC_WORKING_KEY,
+    accessCode = process.env.CC_ACCESS_CODE,
     encRequest = "",
     formbody = "";
 
@@ -309,12 +386,12 @@ module.exports.ccavenuerequesthandler = (request, response) => {
   request.on("data", function (data) {
     body += data;
     encRequest = ccav.encrypt(body, keyBase64, ivBase64);
-    formbody =
-      '<form id="nonseamless" method="post" name="redirect" action="https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction"/> <input type="hidden" id="encRequest" name="encRequest" value="' +
-      encRequest +
-      '"><input type="hidden" name="access_code" id="access_code" value="' +
-      accessCode +
-      '"><script language="javascript">document.redirect.submit();</script></form>';
+    // formbody =
+    //   '<form id="nonseamless" method="post" name="redirect" action="https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction"/> <input type="hidden" id="encRequest" name="encRequest" value="' +
+    //   encRequest +
+    //   '"><input type="hidden" name="access_code" id="access_code" value="' +
+    //   accessCode +
+    //   '"><script language="javascript">document.redirect.submit();</script></form>';
     url = `https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction&encRequest=${encRequest}&access_code=${accessCode}`;
   });
 
@@ -332,10 +409,10 @@ module.exports.ccavenuerequesthandler = (request, response) => {
   return;
 };
 
-module.exports.ccavenueresponsehandler = (request, response) => {
+module.exports.ccavenueresponsehandler = async (request, response) => {
   var ccavEncResponse = "",
     ccavResponse = "",
-    workingKey = "76F35BB595FC59398972C0A3A82C76C1", //Put in the 32-Bit key shared by CCAvenues.
+    workingKey = process.env.CC_WORKING_KEY,
     ccavPOST = "";
 
   //Generate Md5 hash for the key and then convert in base64 string
@@ -355,18 +432,87 @@ module.exports.ccavenueresponsehandler = (request, response) => {
     ccavResponse = ccav.decrypt(encryption, keyBase64, ivBase64);
   });
 
-  request.on("end", function () {
-    var pData = "";
-    pData = "<table border=1 cellspacing=2 cellpadding=2><tr><td>";
-    pData = pData + ccavResponse.replace(/=/gi, "</td><td>");
-    pData = pData.replace(/&/gi, "</td></tr><tr><td>");
-    pData = pData + "</td></tr></table>";
-    htmlcode =
-      '<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Response Handler</title></head><body><center><font size="4" color="blue"><b>Response Page</b></font><br>' +
-      pData +
-      "</center><br></body></html>";
-    response.writeHeader(200, { "Content-Type": "text/html" });
-    response.write(htmlcode);
-    response.end();
+  request.on("end", async function () {
+    console.log(ccavResponse, "<<ccaveres");
+
+    const orderData = JSON.parse(
+      '{"' + ccavResponse.replace(/&/g, '","').replace(/=/g, '":"') + '"}',
+      function (key, value) {
+        return key === "" ? value : decodeURIComponent(value);
+      }
+    );
+    console.log(orderData, "<<<orderData");
+
+    if (orderData.order_status === "Success") {
+      const orderUpdates = {
+        cc_orderId: orderData.order_id,
+        cc_bankRefNo: orderData.bank_ref_no,
+        payment_status: "COMPLETE",
+        order_price: `${orderData.amount} ${orderData.currency}`,
+        shippingAddress: {
+          address: `${orderData.delivery_name}, ${orderData.delivery_address}, ${orderData.delivery_city}, ${orderData.delivery_state}, ${orderData.delivery_country}, ${orderData.delivery_tel}`,
+          pincode: orderData.delivery_zip,
+        },
+      };
+
+      await User_Order.findByIdAndUpdate(orderData.order_id, orderUpdates, {
+        new: true,
+      })
+        .then(async updatedOrder => {
+          console.log(updatedOrder, "<<<updated Order");
+          // update products' availability
+          await Promise.all(
+            updatedOrder.products.map(async item => {
+              try {
+                const product = await Product.findById(item.product._id);
+                product.availability = product.availability - item.quantity;
+                await product.save();
+              } catch (err) {
+                internalServerError(res, err);
+              }
+            })
+          );
+          // empty cart
+          const cart = await User_Cart.findOne({ user: updatedOrder.buyer });
+          cart.products = [];
+          await cart.save();
+        })
+        .catch(err => console.log(err));
+
+      // var pData = "";
+      // pData = "<table border=1 cellspacing=2 cellpadding=2><tr><td>";
+      // pData = pData + ccavResponse.replace(/=/gi, "</td><td>");
+      // pData = pData.replace(/&/gi, "</td></tr><tr><td>");
+      // pData = pData + "</td></tr></table>";
+      // htmlcode =
+      //   '<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Response Handler</title></head><body><center><font size="4" color="blue"><b>Response Page</b></font><br>' +
+      //   pData +
+      //   "</center><br></body></html>";
+      // response.writeHeader(200, { "Content-Type": "text/html" });
+      // response.write(htmlcode);
+      // response.end();
+
+      response
+        .writeHead(301, {
+          Location: "https://www.aalnakolkata.com/profile",
+        })
+        .end();
+    } else if (orderData.order_status === "Aborted") {
+      await User_Order.findByIdAndDelete(orderData.order_id)
+        .then(deletedOrder => console.log(deletedOrder, "<< Order deleted."))
+        .catch(err => console.log(err));
+
+      response
+        .writeHead(301, {
+          Location: "https://www.aalnakolkata.com/cart",
+        })
+        .end();
+    } else {
+      response
+        .writeHead(301, {
+          Location: `https://www.aalnakolkata.com`,
+        })
+        .end();
+    }
   });
 };

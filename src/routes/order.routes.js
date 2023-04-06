@@ -42,6 +42,12 @@ router.get(
 
 // ccavenue routes
 router.post(
+  "/ccavenue-createOrder",
+  requireUserLogin,
+  orderController.ccavenue_creatOrder_post
+);
+
+router.post(
   "/ccavenuerequesthandler",
   requireUserLogin,
   orderController.ccavenuerequesthandler
