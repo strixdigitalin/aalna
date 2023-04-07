@@ -395,7 +395,7 @@ module.exports.ccavenuerequesthandler = (request, response) => {
     //   '"><input type="hidden" name="access_code" id="access_code" value="' +
     //   accessCode +
     //   '"><script language="javascript">document.redirect.submit();</script></form>';
-    url = `https://test.ccavenue.com/transaction/transaction.do?command=initiateTransaction&encRequest=${encRequest}&access_code=${accessCode}`;
+    url = `https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction&encRequest=${encRequest}&access_code=${accessCode}`;
   });
 
   request.on("end", function () {
