@@ -22,7 +22,7 @@ const OrderSchema = mongoose.Schema(
       },
     ],
     order_price: {
-      type: Number,
+      type: String,
       required: true,
     },
     coupon_applied: {
@@ -54,13 +54,13 @@ const OrderSchema = mongoose.Schema(
       required: true,
       default: "PLACED",
     },
-    rzp_orderId: {
+    cc_orderId: {
       type: String,
-      required: true,
+      // required: true,
     },
-    rzp_paymentId: {
+    cc_bankRefNo: {
       type: String,
-      required: true,
+      // required: true,
     },
   },
   { timestamps: true }
