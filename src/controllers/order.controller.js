@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const User_Order = mongoose.model("User_Order");
+const User = mongoose.model("User");
 const User_Cart = mongoose.model("User_Cart");
 const Product = mongoose.model("Product");
 const {
@@ -34,10 +35,10 @@ module.exports.placeOrder_post = async (req, res) => {
 
   try {
     await Promise.all(
-      products.map(item => {
+      products.map((item) => {
         if (!item.quantity >= 1)
           return errorRes(res, 400, "Remove products from with zero quantity.");
-        Product.findById(item.product).then(prod => {
+        Product.findById(item.product).then((prod) => {
           if (!prod)
             return errorRes(
               res,
@@ -59,6 +60,15 @@ module.exports.placeOrder_post = async (req, res) => {
         });
       })
     );
+    if (User_Order) {
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          coupon_applied,
+        },
+        { new: true }
+      );
+    }
 
     const order = new User_Order({
       buyer: userId,
@@ -72,7 +82,7 @@ module.exports.placeOrder_post = async (req, res) => {
 
     await order
       .save()
-      .then(savedOrder => {
+      .then((savedOrder) => {
         savedOrder
           .populate([
             { path: "buyer", select: "_id displayName email" },
@@ -86,14 +96,14 @@ module.exports.placeOrder_post = async (req, res) => {
               select: "_id code condition min_price discount_percent is_active",
             },
           ])
-          .then(result =>
+          .then((result) =>
             successRes(res, {
               order: result,
               message: "Order placed successfully.",
             })
           );
       })
-      .catch(err => internalServerError(res, err));
+      .catch((err) => internalServerError(res, err));
   } catch (error) {
     internalServerError(res, error);
   }
@@ -114,8 +124,8 @@ module.exports.getAllOrders_get = (req, res) => {
         select: "_id code condition min_price discount_percent is_active",
       },
     ])
-    .then(orders => successRes(res, { orders }))
-    .catch(err => internalServerError(res, err));
+    .then((orders) => successRes(res, { orders }))
+    .catch((err) => internalServerError(res, err));
 };
 
 module.exports.userPreviousOrders_get = (req, res) => {
@@ -135,8 +145,8 @@ module.exports.userPreviousOrders_get = (req, res) => {
         select: "_id code condition min_price discount_percent is_active",
       },
     ])
-    .then(orders => successRes(res, { orders }))
-    .catch(err => internalServerError(res, err));
+    .then((orders) => successRes(res, { orders }))
+    .catch((err) => internalServerError(res, err));
 };
 
 module.exports.updateOrder_post = async (req, res) => {
@@ -155,7 +165,7 @@ module.exports.updateOrder_post = async (req, res) => {
     new: true,
     runValidators: true,
   })
-    .then(updatedOrder => {
+    .then((updatedOrder) => {
       if (!updatedOrder) return errorRes(res, 404, "Order does not exist.");
       updatedOrder
         .populate([
@@ -170,15 +180,15 @@ module.exports.updateOrder_post = async (req, res) => {
             select: "_id code condition min_price discount_percent is_active",
           },
         ])
-        .then(result =>
+        .then((result) =>
           successRes(res, {
             updatedOrder: result,
             message: "Order updated successfully.",
           })
         )
-        .catch(err => internalServerError(res, err));
+        .catch((err) => internalServerError(res, err));
     })
-    .catch(err => internalServerError(res, err));
+    .catch((err) => internalServerError(res, err));
 };
 
 // rzp
@@ -244,7 +254,7 @@ module.exports.rzpPaymentVerification = async (req, res) => {
 
     // update products' availability
     await Promise.all(
-      order.products.map(async item => {
+      order.products.map(async (item) => {
         try {
           const product = await Product.findById(item.product._id);
           product.availability = product.availability - item.quantity;
@@ -257,7 +267,7 @@ module.exports.rzpPaymentVerification = async (req, res) => {
 
     await order
       .save()
-      .then(savedOrder => {
+      .then((savedOrder) => {
         savedOrder
           .populate([
             { path: "buyer", select: "_id displayName email" },
@@ -271,7 +281,7 @@ module.exports.rzpPaymentVerification = async (req, res) => {
               select: "_id code condition min_price discount_percent is_active",
             },
           ])
-          .then(result =>
+          .then((result) =>
             successRes(res, {
               order: result,
               orderId: razorpayOrderId,
@@ -281,7 +291,7 @@ module.exports.rzpPaymentVerification = async (req, res) => {
             })
           );
       })
-      .catch(err => internalServerError(res, err));
+      .catch((err) => internalServerError(res, err));
   } catch (error) {
     internalServerError(res, error);
   }

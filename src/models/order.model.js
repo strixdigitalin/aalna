@@ -56,11 +56,11 @@ const OrderSchema = mongoose.Schema(
     },
     rzp_orderId: {
       type: String,
-      required: true,
+      // required: true,
     },
     rzp_paymentId: {
       type: String,
-      required: true,
+      // required: true,
     },
   },
   { timestamps: true }
