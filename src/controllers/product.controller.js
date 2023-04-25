@@ -39,9 +39,30 @@ module.exports.addProduct_post = async (req, res) => {
   if (req.files.image.length == 0)
     return errorRes(res, 400, " Product Image is required.");
   const productId = shortid.generate(shortIdChar);
-  const imageurl = await uploadOnCloudinary(req.files.image[0]);
-  console.log(imageurl, "<<thisisimage");
+  let imageData = [];
+  if (req.files.image.length > 0) {
+    const imageurl1 = await uploadOnCloudinary(req.files.image[0]);
+    imageData = [...imageData, { url: imageurl1 }];
+  }
+  if (req.files.image.length > 1) {
+    const imageurl1 = await uploadOnCloudinary(req.files.image[1]);
+    imageData = [...imageData, { url: imageurl1 }];
+  }
+  if (req.files.image.length > 2) {
+    const imageurl1 = await uploadOnCloudinary(req.files.image[2]);
+    imageData = [...imageData, { url: imageurl1 }];
+  }
+  if (req.files.image.length > 3) {
+    const imageurl1 = await uploadOnCloudinary(req.files.image[3]);
+    imageData = [...imageData, { url: imageurl1 }];
+  }
+  if (req.files.image.length > 4) {
+    const imageurl1 = await uploadOnCloudinary(req.files.image[4]);
+    imageData = [...imageData, { url: imageurl1 }];
+  }
+  // console.log(imageData, "<<thisisimage", req.body.prevImage);
   // return null;
+
   const product = new Product({
     displayName,
     brand_title,
@@ -49,7 +70,7 @@ module.exports.addProduct_post = async (req, res) => {
     color,
     price,
     product_category,
-    displayImage: imageurl,
+    displayImage: imageData,
     availability,
     productId,
   });
@@ -74,7 +95,7 @@ module.exports.addProduct_post = async (req, res) => {
     .catch((err) => internalServerError(res, err));
 };
 
-module.exports.editProduct_post = (req, res) => {
+module.exports.editProduct_post = async (req, res) => {
   const { productId } = req.params;
   const {
     displayName,
@@ -88,16 +109,54 @@ module.exports.editProduct_post = (req, res) => {
   } = req.body;
 
   const updates = {};
+
+  // console.log(req.files, req.body.prevImage);
+  if (!req.files) return errorRes(res, 400, " Product Image is required.");
+  // if (!req.files.image)
+  //   return errorRes(res, 400, " Product Image is required.");
+  // if (req.files.image.length == 0)
+  //   return errorRes(res, 400, " Product Image is required.");
+  // if (req.files.image.length == 0)
+  //   return errorRes(res, 400, " Product Image is required.");
+  let imageData = [];
+  if (req?.files?.image?.length > 0) {
+    if (req?.files?.image?.length > 0) {
+      const imageurl1 = await uploadOnCloudinary(req.files.image[0]);
+      imageData = [...imageData, { url: imageurl1 }];
+    }
+    if (req.files.image.length > 1) {
+      const imageurl1 = await uploadOnCloudinary(req.files.image[1]);
+      imageData = [...imageData, { url: imageurl1 }];
+    }
+    if (req.files.image.length > 2) {
+      const imageurl1 = await uploadOnCloudinary(req.files.image[2]);
+      imageData = [...imageData, { url: imageurl1 }];
+    }
+    if (req.files.image.length > 3) {
+      const imageurl1 = await uploadOnCloudinary(req.files.image[3]);
+      imageData = [...imageData, { url: imageurl1 }];
+    }
+    if (req.files.image.length > 4) {
+      const imageurl1 = await uploadOnCloudinary(req.files.image[4]);
+      imageData = [...imageData, { url: imageurl1 }];
+    }
+  }
+
+  let newImage = [...JSON.parse(req.body.prevImage), ...imageData];
+  // res.status(200).send(newImage);
+  // return null;
   if (displayName) updates.displayName = displayName;
   if (brand_title) updates.brand_title = brand_title;
   if (description) updates.description = description;
   if (color) updates.color = color;
   if (price) updates.price = price;
   if (product_category) updates.product_category = product_category;
-  if (displayImage) {
-    if (displayImage.length !== 0) updates.displayImage = displayImage;
+  if (newImage) {
+    if (newImage.length !== 0) updates.displayImage = newImage;
   }
   if (availability) updates.availability = availability;
+
+  // return null;
 
   if (Object.keys(updates).length == 0)
     return errorRes(res, 400, "No updates made.");
@@ -113,6 +172,7 @@ module.exports.editProduct_post = (req, res) => {
         successRes(res, {
           product: updatedProd,
           message: "Product updated successfully.",
+          newImage,
         });
       })
       .catch((err) => internalServerError(res, err));

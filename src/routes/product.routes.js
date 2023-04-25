@@ -10,12 +10,13 @@ router.post("/product/filter", productController.filterProducts_post);
 router.post(
   "/admin/product/add",
   // requireAdminLogin,
-  upload.fields([{ name: "image", maxCount: 1 }]),
+  upload.fields([{ name: "image", maxCount: 5 }]),
   productController.addProduct_post
 );
 router.post(
   "/admin/product/:productId/edit",
   requireAdminLogin,
+  upload.fields([{ name: "image", maxCount: 5 }]),
   productController.editProduct_post
 );
 router.delete(
