@@ -7,8 +7,9 @@ const {
   shortIdChar,
 } = require("../utility");
 const shortid = require("shortid");
-
+const uploadOnCloudinary = require("../middlewares/Cloudinary");
 module.exports.addProduct_post = async (req, res) => {
+  console.log(req.body, "<<<thisisbody");
   const {
     displayName,
     brand_title,
@@ -27,13 +28,20 @@ module.exports.addProduct_post = async (req, res) => {
     !color ||
     !price ||
     !product_category ||
-    !displayImage ||
-    displayImage.length == 0 ||
     !availability
   )
     return errorRes(res, 400, "All fields are required.");
+  if (!req.files) return errorRes(res, 400, " Product Image is required.");
+  if (!req.files.image)
+    return errorRes(res, 400, " Product Image is required.");
+  if (req.files.image.length == 0)
+    return errorRes(res, 400, " Product Image is required.");
+  if (req.files.image.length == 0)
+    return errorRes(res, 400, " Product Image is required.");
   const productId = shortid.generate(shortIdChar);
-
+  const imageurl = await uploadOnCloudinary(req.files.image[0]);
+  console.log(imageurl, "<<thisisimage");
+  // return null;
   const product = new Product({
     displayName,
     brand_title,
@@ -41,13 +49,13 @@ module.exports.addProduct_post = async (req, res) => {
     color,
     price,
     product_category,
-    displayImage,
+    displayImage: imageurl,
     availability,
     productId,
   });
   await product
     .save()
-    .then(savedProd => {
+    .then((savedProd) => {
       if (!savedProd)
         return errorRes(res, 400, "Internal server error. Please try again.");
       else {
@@ -55,7 +63,7 @@ module.exports.addProduct_post = async (req, res) => {
           .select("-__v")
           .populate("product_category", "_id name displayImage description")
           .populate("color", "_id color_name hexcode")
-          .then(result =>
+          .then((result) =>
             successRes(res, {
               product: result,
               message: "Product added successfully.",
@@ -63,7 +71,7 @@ module.exports.addProduct_post = async (req, res) => {
           );
       }
     })
-    .catch(err => internalServerError(res, err));
+    .catch((err) => internalServerError(res, err));
 };
 
 module.exports.editProduct_post = (req, res) => {
@@ -100,14 +108,14 @@ module.exports.editProduct_post = (req, res) => {
     })
       .populate("product_category", "_id name displayImage")
       .populate("color", "_id color_name hexcode")
-      .then(updatedProd => {
+      .then((updatedProd) => {
         if (!updatedProd) return errorRes(res, 400, "Product does not exist.");
         successRes(res, {
           product: updatedProd,
           message: "Product updated successfully.",
         });
       })
-      .catch(err => internalServerError(res, err));
+      .catch((err) => internalServerError(res, err));
   }
 };
 
@@ -116,8 +124,8 @@ module.exports.allProducts_get = (req, res) => {
     .sort("-createdAt")
     .populate("product_category", "_id name description displayImage")
     .populate("color", "_id color_name hexcode")
-    .then(products => successRes(res, { products }))
-    .catch(err => internalServerError(res, err));
+    .then((products) => successRes(res, { products }))
+    .catch((err) => internalServerError(res, err));
 };
 
 module.exports.getParticularProduct_get = (req, res) => {
@@ -126,22 +134,22 @@ module.exports.getParticularProduct_get = (req, res) => {
   Product.findById(productId)
     .populate("product_category", "_id name description displayImage")
     .populate("color", "_id color_name hexcode")
-    .then(product => successRes(res, { product }))
-    .catch(err => internalServerError(res, err));
+    .then((product) => successRes(res, { product }))
+    .catch((err) => internalServerError(res, err));
 };
 
 module.exports.deleteProduct_delete = (req, res) => {
   const { productId } = req.params;
 
   Product.findByIdAndDelete(productId)
-    .then(deletedProduct => {
+    .then((deletedProduct) => {
       if (!deletedProduct) return errorRes(res, 404, "Product not found.");
       return successRes(res, {
         deletedProduct,
         message: "Product deleted successfully.",
       });
     })
-    .catch(err => internalServerError(res, err));
+    .catch((err) => internalServerError(res, err));
 };
 
 module.exports.filterProducts_post = async (req, res) => {
@@ -181,6 +189,6 @@ module.exports.randomProducts_get = async (req, res) => {
   Product.find()
     .populate("product_category color")
     .limit(limit)
-    .then(products => successRes(res, { products }))
-    .catch(err => internalServerError(res, err));
+    .then((products) => successRes(res, { products }))
+    .catch((err) => internalServerError(res, err));
 };
