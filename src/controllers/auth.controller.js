@@ -27,7 +27,7 @@ module.exports.adminSignup_post = async (req, res) => {
   }
 
   Admin.findOne({ email })
-    .then(savedAdmin => {
+    .then((savedAdmin) => {
       if (savedAdmin) return errorRes(res, 400, "Admin already exist.");
       else {
         bcrypt.genSalt(10, (err, salt) => {
@@ -40,7 +40,7 @@ module.exports.adminSignup_post = async (req, res) => {
 
           bcrypt
             .hash(password, salt)
-            .then(hashedPass => {
+            .then((hashedPass) => {
               const admin = new Admin({
                 displayName,
                 email,
@@ -48,7 +48,7 @@ module.exports.adminSignup_post = async (req, res) => {
               });
               admin
                 .save()
-                .then(admin => {
+                .then((admin) => {
                   const { _id, displayName, email } = admin;
                   const token = jwt.sign({ _id }, JWT_SECRET_ADMIN);
 
@@ -57,13 +57,13 @@ module.exports.adminSignup_post = async (req, res) => {
                     message: "Admin added successfully.",
                   });
                 })
-                .catch(err => internalServerError(res, err));
+                .catch((err) => internalServerError(res, err));
             })
-            .catch(err => internalServerError(res, err));
+            .catch((err) => internalServerError(res, err));
         });
       }
     })
-    .catch(err => internalServerError(res, err));
+    .catch((err) => internalServerError(res, err));
 };
 
 module.exports.adminSignin_post = async (req, res) => {
@@ -71,11 +71,11 @@ module.exports.adminSignin_post = async (req, res) => {
   if (!email || !password)
     return errorRes(res, 400, "All fields are required.");
   Admin.findOne({ email })
-    .then(savedAdmin => {
+    .then((savedAdmin) => {
       if (!savedAdmin) return errorRes(res, 400, "Invalid login credentials.");
       bcrypt
         .compare(password, savedAdmin.password)
-        .then(doMatch => {
+        .then((doMatch) => {
           if (!doMatch) return errorRes(res, 400, "Invalid login credentials.");
 
           const { _id, displayName, email } = savedAdmin;
@@ -85,9 +85,9 @@ module.exports.adminSignin_post = async (req, res) => {
             message: "Signin success.",
           });
         })
-        .catch(err => internalServerError(res, err));
+        .catch((err) => internalServerError(res, err));
     })
-    .catch(err => internalServerError(res, err));
+    .catch((err) => internalServerError(res, err));
 };
 
 module.exports.userSignup_post = async (req, res) => {
@@ -104,7 +104,7 @@ module.exports.userSignup_post = async (req, res) => {
     console.log(err);
   }
 
-  User.findOne({ phoneNumber }).then(savedNumber => {
+  User.findOne({ phoneNumber }).then((savedNumber) => {
     if (savedNumber)
       return errorRes(
         res,
@@ -113,7 +113,7 @@ module.exports.userSignup_post = async (req, res) => {
       );
   });
 
-  User.findOne({ email }).then(savedUser => {
+  User.findOne({ email }).then((savedUser) => {
     if (savedUser)
       return errorRes(res, 400, "User already registered with given email.");
 
@@ -123,7 +123,7 @@ module.exports.userSignup_post = async (req, res) => {
 
       bcrypt
         .hash(password, salt)
-        .then(hashedPass => {
+        .then((hashedPass) => {
           const user = new User({
             displayName,
             email,
@@ -132,7 +132,7 @@ module.exports.userSignup_post = async (req, res) => {
           });
           user
             .save()
-            .then(async user => {
+            .then(async (user) => {
               const newCart = new User_Cart({
                 user: user._id,
                 products: [],
@@ -167,9 +167,9 @@ module.exports.userSignup_post = async (req, res) => {
                 message: "User added successfully.",
               });
             })
-            .catch(err => internalServerError(res, err));
+            .catch((err) => internalServerError(res, err));
         })
-        .catch(err => internalServerError(res, err));
+        .catch((err) => internalServerError(res, err));
     });
   });
 };
@@ -181,11 +181,11 @@ module.exports.userSignin_post = async (req, res) => {
   User.findOne({
     email,
   })
-    .then(savedUser => {
+    .then((savedUser) => {
       if (!savedUser) return errorRes(res, 400, "Invalid login credentials.");
       bcrypt
         .compare(password, savedUser.password)
-        .then(doMatch => {
+        .then((doMatch) => {
           if (!doMatch) return errorRes(res, 400, "Invalid login credentials.");
           else if (savedUser.isBlocked)
             return errorRes(res, 400, "User blocked by admin.");
@@ -200,6 +200,7 @@ module.exports.userSignin_post = async (req, res) => {
             email,
             phoneNumber,
             accountType,
+            coupon_applied,
             isBlocked,
           } = savedUser;
           const token = jwt.sign({ _id }, JWT_SECRET_USER);
@@ -214,13 +215,14 @@ module.exports.userSignin_post = async (req, res) => {
               phoneNumber,
               isBlocked,
               cart,
+              coupon_applied,
               shippingAddress,
               token,
             },
             message: "Signin success.",
           });
         })
-        .catch(err => internalServerError(res, err));
+        .catch((err) => internalServerError(res, err));
     })
-    .catch(err => internalServerError(res, err));
+    .catch((err) => internalServerError(res, err));
 };

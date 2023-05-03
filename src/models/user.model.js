@@ -56,6 +56,7 @@ const UserSchema = mongoose.Schema(
       type: String,
       default: "user",
     },
+    coupon_applied: [],
   },
   { timestamps: true }
 );
