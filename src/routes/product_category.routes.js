@@ -5,10 +5,13 @@ const {
   requireAdminLogin,
   requireUserLogin,
 } = require("../middlewares/requireLogin");
+const upload = require("../middlewares/Multer");
 
 router.post(
   "/product/category/add",
   requireAdminLogin,
+  upload.fields([{ name: "file", maxCount: 5 }]),
+
   categoryController.addProductCategory_post
 );
 router.all("/product/category/all", categoryController.allCategory_get);
