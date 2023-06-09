@@ -20,7 +20,6 @@ module.exports.addProduct_post = async (req, res) => {
     displayImage,
     availability,
   } = req.body;
-
   if (
     !displayName ||
     !brand_title ||
@@ -180,8 +179,14 @@ module.exports.editProduct_post = async (req, res) => {
 };
 
 module.exports.allProducts_get = (req, res) => {
+  let skip = 0;
+  if (req.query.page) {
+    skip = +req.query.page - 1;
+  }
   Product.find()
     .sort("-createdAt")
+    .skip(skip * 18)
+    .limit(18)
     .populate("product_category", "_id name description displayImage")
     .populate("color", "_id color_name hexcode")
     .then((products) => successRes(res, { products }))
