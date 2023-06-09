@@ -183,13 +183,17 @@ module.exports.allProducts_get = (req, res) => {
   if (req.query.page) {
     skip = +req.query.page - 1;
   }
+
   Product.find()
     .sort("-createdAt")
     .skip(skip * 18)
     .limit(18)
     .populate("product_category", "_id name description displayImage")
     .populate("color", "_id color_name hexcode")
-    .then((products) => successRes(res, { products }))
+    .then(async (products) => {
+      let count = await Product.countDocuments();
+      successRes(res, { products, count });
+    })
     .catch((err) => internalServerError(res, err));
 };
 
